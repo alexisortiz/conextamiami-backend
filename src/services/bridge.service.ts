@@ -77,7 +77,7 @@ export async function fetchPropertiesByCity(
   const trimmed = city.trim();
   if (!trimmed) return [];
 
-  const filter = `City eq '${odataStringLiteral(trimmed)}'`;
+  const filter = `tolower(City) eq '${odataStringLiteral(trimmed.toLowerCase())}'`;
 
   // 1. Obtener propiedades base con la colección Media incluida
   const data = await fetchJson<BridgeODataCollection<BridgePropertyRaw>>(
@@ -100,36 +100,14 @@ export async function fetchPropertyByListingId(
   const trimmed = listingId.trim();
   if (!trimmed) return null;
 
-  // 1. Buscar ListingKey
+  // 1. Obtener la propiedad y su lista de imágenes en una sola petición
   const search = await fetchJson<BridgeODataCollection<BridgePropertyRaw>>(
     propertyUrl({
       $filter: `ListingId eq '${odataStringLiteral(trimmed)}'`,
-      $select: DETAIL_SELECT,
+      $select: `${DETAIL_SELECT},Media`,
       $top: '1',
     })
   );
 
-  const base = search.value?.[0];
-  if (!base?.ListingKey) return null;
-
-  // 2. 🔥 Traer entidad completa (incluye Media real)
-  const full = await fetchJson<BridgePropertyRaw>(
-    propertyByKeyUrl(base.ListingKey)
-  );
-
-  // 🔥 fallback defensivo si Media no viene
-  if (!Array.isArray(full.Media) || full.Media.length === 0) {
-    const mediaData = await fetchJson<BridgeODataCollection<any>>(
-      mediaUrl({
-        $filter: `ResourceRecordKey eq '${odataStringLiteral(base.ListingKey)}'`,
-        $select: 'MediaURL,Order,ResourceRecordKey',
-      })
-    );
-
-    full.Media = (mediaData.value ?? []).sort(
-      (a, b) => (a.Order ?? 9999) - (b.Order ?? 9999)
-    );
-  }
-
-  return full;
+  return search.value?.[0] ?? null;
 }
