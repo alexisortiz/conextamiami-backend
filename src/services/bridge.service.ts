@@ -79,39 +79,16 @@ export async function fetchPropertiesByCity(
 
   const filter = `City eq '${odataStringLiteral(trimmed)}'`;
 
-  // 1. Obtener propiedades base
+  // 1. Obtener propiedades base con la colección Media incluida
   const data = await fetchJson<BridgeODataCollection<BridgePropertyRaw>>(
     propertyUrl({
       $filter: filter,
-      $select: LIST_SELECT,
-      $top: String(Math.min(Math.max(top, 1), 20)), // ⚠️ limita para evitar explosión
+      $select: `${LIST_SELECT},Media`,
+      $top: String(Math.max(top, 1)),
     })
   );
 
-  const properties = data.value ?? [];
-  if (properties.length === 0) return [];
-
-  // 2. Traer detalle (con Media) en paralelo
-  const enriched = await Promise.all(
-    properties.map(async (p) => {
-      if (!p.ListingKey) return p;
-
-      try {
-        const detail = await fetchJson<BridgePropertyRaw>(
-          `${env.bridgeApiBase.replace(/\/$/, '')}/${env.bridgeDataset}/Property('${p.ListingKey}')?access_token=${assertToken()}`
-        );
-
-        return {
-          ...p,
-          Media: detail.Media ?? [],
-        };
-      } catch {
-        return p;
-      }
-    })
-  );
-
-  return enriched;
+  return data.value ?? [];
 }
 
 /* =========================================================
