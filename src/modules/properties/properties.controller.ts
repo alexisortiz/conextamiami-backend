@@ -1,9 +1,22 @@
 import type { NextFunction, Request, Response } from 'express';
+import type { PropertyListResponse } from '@conextamiami/contracts';
 import {
-  fetchPropertiesByCity,
+  searchProperties,
   fetchPropertyByListingId,
 } from '../../services/bridge.service.js';
 import { mapDetail, mapListItem } from '../../services/property-mapper.js';
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 12;
+const MAX_LIMIT = 50;
+
+function readPositiveInt(value: unknown, fallback: number): number {
+  const parsed = typeof value === 'string' ? Number(value) : NaN;
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return fallback;
+  }
+  return parsed;
+}
 
 export async function listProperties(
   req: Request,
@@ -11,18 +24,49 @@ export async function listProperties(
   next: NextFunction
 ): Promise<void> {
   try {
-    const city = typeof req.query.city === 'string' ? req.query.city : '';
-    if (!city.trim()) {
-      res.status(400).json({ error: 'Missing or empty city parameter' });
-      return;
-    }
+    const minPrice = req.query.minPrice ? Number(req.query.minPrice) : undefined;
+    const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : undefined;
+    const minBeds = req.query.minBeds ? Number(req.query.minBeds) : undefined;
+    const minBaths = req.query.minBaths ? Number(req.query.minBaths) : undefined;
+    const propertyType = typeof req.query.propertyType === 'string' ? req.query.propertyType : undefined;
+    const priceSort =
+      req.query.priceSort === 'asc' || req.query.priceSort === 'desc'
+        ? req.query.priceSort
+        : undefined;
+    const listingStatus =
+      req.query.listingStatus === 'active' || req.query.listingStatus === 'inactive'
+        ? req.query.listingStatus
+        : 'active';
+    const city = typeof req.query.city === 'string' ? req.query.city : undefined;
+    const page = readPositiveInt(req.query.page, DEFAULT_PAGE);
+    const limit = Math.min(readPositiveInt(req.query.limit, DEFAULT_LIMIT), MAX_LIMIT);
 
-    const raw = await fetchPropertiesByCity(city, 50);
-    const items = raw
+    const rawData = await searchProperties({
+      city,
+      minPrice: !isNaN(minPrice as number) ? minPrice : undefined,
+      maxPrice: !isNaN(maxPrice as number) ? maxPrice : undefined,
+      minBeds: !isNaN(minBeds as number) ? minBeds : undefined,
+      minBaths: !isNaN(minBaths as number) ? minBaths : undefined,
+      propertyType,
+      priceSort,
+      listingStatus,
+      limit,
+      offset: (page - 1) * limit,
+    });
+
+    const items = rawData.items
       .map(mapListItem)
       .filter((item): item is NonNullable<typeof item> => item != null);
 
-    res.json({ items });
+    const payload: PropertyListResponse = {
+      items,
+      total: rawData.total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(rawData.total / limit)),
+    };
+
+    res.json(payload);
   } catch (e) {
     next(e);
   }

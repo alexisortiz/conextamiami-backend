@@ -12,8 +12,8 @@ export const API_SERVICES = [
     {
         method: 'GET',
         path: '/api/properties',
-        description: 'Listado de propiedades filtradas por ciudad',
-        query: ['city (requerido)'],
+        description: 'Listado paginado de propiedades con filtros',
+        query: ['city', 'minPrice', 'maxPrice', 'minBeds', 'minBaths', 'propertyType', 'listingStatus', 'priceSort', 'page', 'limit'],
     },
     {
         method: 'GET',

@@ -13,9 +13,16 @@ function assertToken() {
     }
     return env.bridgeServerToken;
 }
-/** OData: single quotes in strings are escaped by doubling. */
 function odataStringLiteral(value) {
     return value.replace(/'/g, "''");
+}
+function normalizeCity(value) {
+    return value
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
 }
 function propertyUrl(query) {
     const base = `${env.bridgeApiBase.replace(/\/$/, '')}/${env.bridgeDataset}/Property`;
@@ -35,41 +42,64 @@ async function fetchJson(url) {
         throw new BridgeRequestError('Network error', 503);
     }
     if (!res.ok) {
-        // Never log response body (may contain upstream hints); status is enough.
         throw new BridgeRequestError('Upstream data source error', res.status);
     }
     return (await res.json());
 }
-const LIST_SELECT = 'ListingId,ListPrice,City,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,Media';
-const DETAIL_SELECT = 'ListingId,ListPrice,City,StateOrProvince,PostalCode,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,PublicRemarks,Latitude,Longitude,Media';
-export async function fetchPropertiesByCity(city, top) {
-    const trimmed = city.trim();
-    if (!trimmed) {
-        return [];
+const LIST_SELECT = 'ListingId,ListingKey,ListPrice,City,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,PropertyType,PropertySubType,BuildingAreaTotal,DaysOnMarket,MlsStatus,MajorChangeType';
+const DETAIL_SELECT = 'ListingId,ListingKey,ListPrice,City,StateOrProvince,PostalCode,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,PublicRemarks,Latitude,Longitude,PropertyType,PropertySubType,BuildingAreaTotal,LotSizeSquareFeet,DaysOnMarket,MlsStatus,MajorChangeType,ListAgentFullName,ListOfficeName,ParkingFeatures,Cooling,Heating,YearBuiltDetails';
+export async function searchProperties(filters) {
+    const priceSort = filters.priceSort === 'asc' ? 'asc' : 'desc';
+    const conditions = [];
+    if (filters.city?.trim()) {
+        conditions.push(`City eq '${odataStringLiteral(normalizeCity(filters.city))}'`);
     }
-    const filter = `City eq '${odataStringLiteral(trimmed)}'`;
-    const url = propertyUrl({
-        $filter: filter,
-        $select: LIST_SELECT,
-        $expand: 'Media',
-        $top: String(Math.min(Math.max(top, 1), 50)),
-    });
-    const data = await fetchJson(url);
-    return data.value ?? [];
+    if (filters.minPrice != null) {
+        conditions.push(`ListPrice ge ${filters.minPrice}`);
+    }
+    if (filters.maxPrice != null) {
+        conditions.push(`ListPrice le ${filters.maxPrice}`);
+    }
+    if (filters.minBeds != null) {
+        conditions.push(`BedroomsTotal ge ${filters.minBeds}`);
+    }
+    if (filters.minBaths != null) {
+        conditions.push(`BathroomsTotalInteger ge ${filters.minBaths}`);
+    }
+    if (filters.propertyType?.trim()) {
+        conditions.push(`PropertyType eq '${odataStringLiteral(filters.propertyType.trim())}'`);
+    }
+    if (filters.listingStatus === 'active') {
+        conditions.push(`((MlsStatus eq 'Active' or MlsStatus eq 'A' or MajorChangeType ne 'Closed') and MlsStatus ne 'Rented')`);
+    }
+    if (filters.listingStatus === 'inactive') {
+        conditions.push(`(MajorChangeType eq 'Closed' or MlsStatus eq 'Rented' or (MlsStatus ne 'Active' and MlsStatus ne 'A'))`);
+    }
+    const data = await fetchJson(propertyUrl({
+        $select: `${LIST_SELECT},Media`,
+        $orderby: `ListPrice ${priceSort}`,
+        $top: String(filters.limit ?? 50),
+        $skip: String(filters.offset ?? 0),
+        $count: 'true',
+        ...(conditions.length > 0 ? { $filter: conditions.join(' and ') } : {}),
+    }));
+    return {
+        items: data.value ?? [],
+        total: typeof data['@odata.count'] === 'number' ? data['@odata.count'] : data.value?.length ?? 0,
+    };
 }
+/* =========================================================
+   DETAIL
+========================================================= */
 export async function fetchPropertyByListingId(listingId) {
     const trimmed = listingId.trim();
-    if (!trimmed) {
+    if (!trimmed)
         return null;
-    }
-    const filter = `ListingId eq '${odataStringLiteral(trimmed)}'`;
-    const url = propertyUrl({
-        $filter: filter,
-        $select: DETAIL_SELECT,
-        $expand: 'Media',
+    // 1. Obtener la propiedad y su lista de imágenes en una sola petición
+    const search = await fetchJson(propertyUrl({
+        $filter: `ListingId eq '${odataStringLiteral(trimmed)}'`,
+        $select: `${DETAIL_SELECT},Media`,
         $top: '1',
-    });
-    const data = await fetchJson(url);
-    const first = data.value?.[0];
-    return first ?? null;
+    }));
+    return search.value?.[0] ?? null;
 }

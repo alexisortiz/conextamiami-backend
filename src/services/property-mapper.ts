@@ -1,23 +1,8 @@
 import type { BridgePropertyRaw } from './bridge.types.js';
-
-export interface PropertyListDto {
-  id: string;
-  title: string;
-  price: number | null;
-  city: string;
-  bedrooms: number | null;
-  bathrooms: number | null;
-  image: string | null;
-}
-
-export interface PropertyDetailDto extends PropertyListDto {
-  stateOrProvince: string | null;
-  postalCode: string | null;
-  description: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  images: string[];
-}
+import type {
+  PropertyDetail,
+  PropertyListItem,
+} from '@conextamiami/contracts';
 
 function firstImageUrl(raw: BridgePropertyRaw): string | null {
   const media = raw.Media;
@@ -34,7 +19,7 @@ function allImageUrls(raw: BridgePropertyRaw): string[] {
     .filter((u): u is string => typeof u === 'string' && u.length > 0);
 }
 
-export function mapListItem(raw: BridgePropertyRaw): PropertyListDto | null {
+export function mapListItem(raw: BridgePropertyRaw): PropertyListItem | null {
   const id = raw.ListingId != null ? String(raw.ListingId) : '';
   if (!id) return null;
 
@@ -52,10 +37,15 @@ export function mapListItem(raw: BridgePropertyRaw): PropertyListDto | null {
     bathrooms:
       typeof raw.BathroomsTotalInteger === 'number' ? raw.BathroomsTotalInteger : null,
     image: firstImageUrl(raw),
+    propertyType: typeof raw.PropertyType === 'string' ? raw.PropertyType : null,
+    propertySubType: typeof raw.PropertySubType === 'string' ? raw.PropertySubType : null,
+    buildingAreaTotal: typeof raw.BuildingAreaTotal === 'number' ? raw.BuildingAreaTotal : null,
+    daysOnMarket: typeof raw.DaysOnMarket === 'number' ? raw.DaysOnMarket : null,
+    mlsStatus: typeof raw.MlsStatus === 'string' ? raw.MlsStatus : null,
   };
 }
 
-export function mapDetail(raw: BridgePropertyRaw): PropertyDetailDto | null {
+export function mapDetail(raw: BridgePropertyRaw): PropertyDetail | null {
   const base = mapListItem(raw);
   if (!base) return null;
 
@@ -68,5 +58,13 @@ export function mapDetail(raw: BridgePropertyRaw): PropertyDetailDto | null {
     latitude: typeof raw.Latitude === 'number' ? raw.Latitude : null,
     longitude: typeof raw.Longitude === 'number' ? raw.Longitude : null,
     images: allImageUrls(raw),
+    lotSizeSquareFeet: typeof raw.LotSizeSquareFeet === 'number' ? raw.LotSizeSquareFeet : null,
+    listAgentFullName: typeof raw.ListAgentFullName === 'string' ? raw.ListAgentFullName : null,
+
+    listOfficeName: typeof raw.ListOfficeName === 'string' ? raw.ListOfficeName : null,
+    parkingFeatures: Array.isArray(raw.ParkingFeatures) ? raw.ParkingFeatures : [],
+    cooling: Array.isArray(raw.Cooling) ? raw.Cooling : [],
+    heating: Array.isArray(raw.Heating) ? raw.Heating : [],
+    yearBuiltDetails: typeof raw.YearBuiltDetails === 'string' ? raw.YearBuiltDetails : null,
   };
 }

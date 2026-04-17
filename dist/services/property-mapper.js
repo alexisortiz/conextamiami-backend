@@ -28,6 +28,11 @@ export function mapListItem(raw) {
         bedrooms: typeof raw.BedroomsTotal === 'number' ? raw.BedroomsTotal : null,
         bathrooms: typeof raw.BathroomsTotalInteger === 'number' ? raw.BathroomsTotalInteger : null,
         image: firstImageUrl(raw),
+        propertyType: typeof raw.PropertyType === 'string' ? raw.PropertyType : null,
+        propertySubType: typeof raw.PropertySubType === 'string' ? raw.PropertySubType : null,
+        buildingAreaTotal: typeof raw.BuildingAreaTotal === 'number' ? raw.BuildingAreaTotal : null,
+        daysOnMarket: typeof raw.DaysOnMarket === 'number' ? raw.DaysOnMarket : null,
+        mlsStatus: typeof raw.MlsStatus === 'string' ? raw.MlsStatus : null,
     };
 }
 export function mapDetail(raw) {
@@ -42,5 +47,12 @@ export function mapDetail(raw) {
         latitude: typeof raw.Latitude === 'number' ? raw.Latitude : null,
         longitude: typeof raw.Longitude === 'number' ? raw.Longitude : null,
         images: allImageUrls(raw),
+        lotSizeSquareFeet: typeof raw.LotSizeSquareFeet === 'number' ? raw.LotSizeSquareFeet : null,
+        listAgentFullName: typeof raw.ListAgentFullName === 'string' ? raw.ListAgentFullName : null,
+        listOfficeName: typeof raw.ListOfficeName === 'string' ? raw.ListOfficeName : null,
+        parkingFeatures: Array.isArray(raw.ParkingFeatures) ? raw.ParkingFeatures : [],
+        cooling: Array.isArray(raw.Cooling) ? raw.Cooling : [],
+        heating: Array.isArray(raw.Heating) ? raw.Heating : [],
+        yearBuiltDetails: typeof raw.YearBuiltDetails === 'string' ? raw.YearBuiltDetails : null,
     };
 }

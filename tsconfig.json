@@ -5,6 +5,10 @@
     "moduleResolution": "NodeNext",
     "outDir": "dist",
     "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@conextamiami/contracts": ["../conextamiami-contracts/properties.d.ts"]
+    },
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
