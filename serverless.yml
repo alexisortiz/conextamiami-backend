@@ -8,8 +8,11 @@
 #    ./scripts/deploy.sh
 #    # o: npm run deploy
 #
-# 3) Configura CORS para tu dominio del frontend (obligatorio en prod real):
-#    export CORS_ORIGIN='https://tu-dominio.com'
+# 3) Origen del sitio (CORS + validación de `/api`):
+#    export CORS_ORIGIN='https://conextamiami.com'
+#    export ALLOWED_ORIGINS='https://conextamiami.com'
+#    Opcional — clave pública compartida (misma que VITE_PUBLIC_API_KEY en el front):
+#    export PUBLIC_CLIENT_API_KEY='...'
 #    ./scripts/deploy.sh
 #
 # El token NO se inyecta en variables de Lambda en texto plano: la función lo lee desde SSM al arrancar.
@@ -29,7 +32,9 @@ provider:
     NODE_ENV: production
     BRIDGE_API_BASE: ${env:BRIDGE_API_BASE, 'https://api.bridgedataoutput.com/api/v2/OData'}
     BRIDGE_DATASET: ${env:BRIDGE_DATASET, 'miamire'}
-    CORS_ORIGIN: ${env:CORS_ORIGIN, '*'}
+    CORS_ORIGIN: ${env:CORS_ORIGIN, 'https://conextamiami.com'}
+    ALLOWED_ORIGINS: ${env:ALLOWED_ORIGINS, 'https://conextamiami.com'}
+    PUBLIC_CLIENT_API_KEY: ${env:PUBLIC_CLIENT_API_KEY, ''}
     BRIDGE_SERVER_TOKEN_SSM_PARAM: /conextamiami/${self:provider.stage}/bridge-server-token
   iam:
     role:

@@ -15,4 +15,13 @@ export declare const env: {
     readonly bridgeServerToken: string;
     /** Comma-separated origins, or * for development only. */
     readonly corsOrigin: string;
+    /** Orígenes permitidos para `/api` cuando accessControlEnabled (p. ej. https://conextamiami.com). */
+    readonly allowedOrigins: string[];
+    /** Activo en producción/Lambda si allowedOrigins no está vacío. */
+    readonly accessControlEnabled: boolean;
+    /**
+     * Clave compartida opcional (misma en Lambda y VITE_PUBLIC_API_KEY). Mitiga abuso casual;
+     * no es secreto frente a quien inspecciona el bundle del frontend.
+     */
+    readonly publicClientKey: string;
 };

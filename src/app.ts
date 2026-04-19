@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { API_SERVICES } from './config/api-catalog.js';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { publicAccessGuard } from './middleware/publicAccess.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { apiRouter } from './routes/index.js';
 
@@ -37,7 +38,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
-app.use('/api', apiLimiter, apiRouter);
+app.use('/api', publicAccessGuard, apiLimiter, apiRouter);
 
 app.use(errorHandler);
 
