@@ -8,7 +8,10 @@ export declare const env: {
     readonly port: number;
     readonly bridgeApiBase: string;
     readonly bridgeDataset: string;
-    /** Server token for Bridge API (never log this value). */
+    /**
+     * Server token for Bridge API (never log this value).
+     * Opcional al arranque: si falta, `/health` sigue OK; rutas que llaman a Bridge devuelven 503 vía `bridge.service`.
+     */
     readonly bridgeServerToken: string;
     /** Comma-separated origins, or * for development only. */
     readonly corsOrigin: string;

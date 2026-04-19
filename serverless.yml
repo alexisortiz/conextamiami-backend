@@ -1,0 +1,61 @@
+# conextamiami-bff — Lambda + API Gateway HTTP API
+#
+# 1) Guarda el token de Bridge en SSM (SecureString), una vez por stage:
+#    export BRIDGE_SERVER_TOKEN='...'
+#    ./scripts/put-bridge-token-ssm.sh dev
+#
+# 2) Despliega:
+#    ./scripts/deploy.sh
+#    # o: npm run deploy
+#
+# 3) Configura CORS para tu dominio del frontend (obligatorio en prod real):
+#    export CORS_ORIGIN='https://tu-dominio.com'
+#    ./scripts/deploy.sh
+#
+# El token NO se inyecta en variables de Lambda en texto plano: la función lo lee desde SSM al arrancar.
+
+service: conextamiami-bff
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: 256
+  timeout: 29
+  environment:
+    NODE_ENV: production
+    BRIDGE_API_BASE: ${env:BRIDGE_API_BASE, 'https://api.bridgedataoutput.com/api/v2/OData'}
+    BRIDGE_DATASET: ${env:BRIDGE_DATASET, 'miamire'}
+    CORS_ORIGIN: ${env:CORS_ORIGIN, '*'}
+    BRIDGE_SERVER_TOKEN_SSM_PARAM: /conextamiami/${self:provider.stage}/bridge-server-token
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - ssm:GetParameter
+          Resource:
+            - arn:aws:ssm:${self:provider.region}:*:parameter/conextamiami/*
+        # Sin ${aws:accountId}: Serverless a veces falla al resolverlo aunque `aws` CLI funcione.
+        - Effect: Allow
+          Action:
+            - kms:Decrypt
+          Resource:
+            - arn:aws:kms:${self:provider.region}:*:key/*
+
+functions:
+  api:
+    handler: dist/handler.handler
+    events:
+      - httpApi: '*'
+
+package:
+  patterns:
+    - dist/**
+    - package.json
+    - node_modules/**
+
+plugins: []
