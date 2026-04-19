@@ -49,7 +49,9 @@ async function fetchJson(url) {
 const LIST_SELECT = 'ListingId,ListingKey,ListPrice,City,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,PropertyType,PropertySubType,BuildingAreaTotal,DaysOnMarket,MlsStatus,MajorChangeType';
 const DETAIL_SELECT = 'ListingId,ListingKey,ListPrice,City,StateOrProvince,PostalCode,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,PublicRemarks,Latitude,Longitude,PropertyType,PropertySubType,BuildingAreaTotal,LotSizeSquareFeet,DaysOnMarket,MlsStatus,MajorChangeType,ListAgentFullName,ListOfficeName,ParkingFeatures,Cooling,Heating,YearBuiltDetails';
 export async function searchProperties(filters) {
-    const priceSort = filters.priceSort === 'asc' ? 'asc' : 'desc';
+    const orderBy = filters.priceSort === 'asc' || filters.priceSort === 'desc'
+        ? `DaysOnMarket asc,ListPrice ${filters.priceSort}`
+        : 'DaysOnMarket asc';
     const conditions = [];
     if (filters.city?.trim()) {
         conditions.push(`City eq '${odataStringLiteral(normalizeCity(filters.city))}'`);
@@ -77,7 +79,7 @@ export async function searchProperties(filters) {
     }
     const data = await fetchJson(propertyUrl({
         $select: `${LIST_SELECT},Media`,
-        $orderby: `ListPrice ${priceSort}`,
+        $orderby: orderBy,
         $top: String(filters.limit ?? 50),
         $skip: String(filters.offset ?? 0),
         $count: 'true',

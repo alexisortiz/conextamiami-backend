@@ -75,7 +75,10 @@ export interface PropertyFilters extends PropertySearchFilters {
 export async function searchProperties(
   filters: PropertyFilters
 ): Promise<{ items: BridgePropertyRaw[]; total: number }> {
-  const priceSort = filters.priceSort === 'asc' ? 'asc' : 'desc';
+  const orderBy =
+    filters.priceSort === 'asc' || filters.priceSort === 'desc'
+      ? `DaysOnMarket asc,ListPrice ${filters.priceSort}`
+      : 'DaysOnMarket asc';
   const conditions: string[] = [];
   if (filters.city?.trim()) {
     conditions.push(`City eq '${odataStringLiteral(normalizeCity(filters.city))}'`);
@@ -105,7 +108,7 @@ export async function searchProperties(
   const data = await fetchJson<BridgeODataCollection<BridgePropertyRaw>>(
     propertyUrl({
       $select: `${LIST_SELECT},Media`,
-      $orderby: `ListPrice ${priceSort}`,
+      $orderby: orderBy,
       $top: String(filters.limit ?? 50),
       $skip: String(filters.offset ?? 0),
       $count: 'true',
