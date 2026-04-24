@@ -18,6 +18,19 @@ function readPositiveInt(value: unknown, fallback: number): number {
   return parsed;
 }
 
+function dedupeItemsById<T extends { id: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+
+  return items.filter((item) => {
+    if (!item.id || seen.has(item.id)) {
+      return false;
+    }
+
+    seen.add(item.id);
+    return true;
+  });
+}
+
 export async function listProperties(
   req: Request,
   res: Response,
@@ -54,9 +67,11 @@ export async function listProperties(
       offset: (page - 1) * limit,
     });
 
-    const items = rawData.items
-      .map(mapListItem)
-      .filter((item): item is NonNullable<typeof item> => item != null);
+    const items = dedupeItemsById(
+      rawData.items
+        .map(mapListItem)
+        .filter((item): item is NonNullable<typeof item> => item != null)
+    );
 
     const payload: PropertyListResponse = {
       items,

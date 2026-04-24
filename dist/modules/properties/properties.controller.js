@@ -10,6 +10,16 @@ function readPositiveInt(value, fallback) {
     }
     return parsed;
 }
+function dedupeItemsById(items) {
+    const seen = new Set();
+    return items.filter((item) => {
+        if (!item.id || seen.has(item.id)) {
+            return false;
+        }
+        seen.add(item.id);
+        return true;
+    });
+}
 export async function listProperties(req, res, next) {
     try {
         const minPrice = req.query.minPrice ? Number(req.query.minPrice) : undefined;
@@ -38,9 +48,9 @@ export async function listProperties(req, res, next) {
             limit,
             offset: (page - 1) * limit,
         });
-        const items = rawData.items
+        const items = dedupeItemsById(rawData.items
             .map(mapListItem)
-            .filter((item) => item != null);
+            .filter((item) => item != null));
         const payload = {
             items,
             total: rawData.total,
